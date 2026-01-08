@@ -5,7 +5,7 @@ import torch.nn as nn
 from kret_lightning import *
 
 
-class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin):
+class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin, MetricMixin):
     """
     LSTM-based model for predicting PM2.5 air quality from temporal meteorological data.
 
@@ -121,7 +121,7 @@ class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin):
         # Prediction
         output: torch.Tensor = self.model(last_hidden)  # (batch, 1)
 
-        return output.squeeze(-1)
+        return output  # Keep shape as (batch, 1) to match target shape
 
 
 # ========================================================================================================================
