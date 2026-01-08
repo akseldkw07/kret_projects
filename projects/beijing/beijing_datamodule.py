@@ -1,4 +1,3 @@
-import typing as t
 from pathlib import Path
 
 from kret_lightning.datamodule.data_module_custom import (
@@ -13,9 +12,6 @@ from kret_torch_utils.tensor_ds_custom import TensorDatasetCustom
 from kret_torch_utils.UTILS_torch import KRET_TORCH_UTILS
 
 from projects.beijing.load_beijing_data import load_beijing_air_quality_data
-
-if t.TYPE_CHECKING:
-    pass
 
 
 class BeijingDataModule(CustomDataModule, PandasInputMixin):
