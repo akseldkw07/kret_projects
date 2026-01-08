@@ -1,26 +1,21 @@
-from turtle import st
 import typing as t
 from pathlib import Path
 
-import lightning as L
-import pandas as pd
-from sklearn.pipeline import Pipeline
-from kret_sklearn.pd_pipeline import Pipeline, PipelinePD
-from kret_sklearn.custom_transformers import MissingValueRemover, DateTimeSinCosNormalizer
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
-from torchvision import transforms
-from kret_torch_utils.torch_defaults import TorchDefaults
-from kret_np_pd.np_pd_nb_imports import *
-
-from kret_lightning.data_module_custom import CustomDataModule, LoadedDfTuple, PandasInputMixin, SplitTuple
-from projects.beijing.load_beijing_data import load_beijing_air_quality_data
+from kret_lightning.datamodule.data_module_custom import (
+    STAGE_LITERAL,
+    CustomDataModule,
+    LoadedDfTuple,
+    PandasInputMixin,
+    SplitTuple,
+)
+from kret_sklearn.pd_pipeline import PipelinePD
 from kret_torch_utils.tensor_ds_custom import TensorDatasetCustom
 from kret_torch_utils.UTILS_torch import KRET_TORCH_UTILS
 
+from projects.beijing.load_beijing_data import load_beijing_air_quality_data
+
 if t.TYPE_CHECKING:
-    from kret_torch_utils.torch_typehints import DataLoader___init___TypedDict
+    pass
 
 
 class BeijingDataModule(CustomDataModule, PandasInputMixin):
@@ -44,7 +39,7 @@ class BeijingDataModule(CustomDataModule, PandasInputMixin):
         x, y = load_beijing_air_quality_data(self.data_dir)
         return LoadedDfTuple(X=x, y=y)
 
-    def setup(self, stage: t.Literal["fit", "validate", "test", "predict"]) -> None:  # type: ignore[override]
+    def setup(self, stage: STAGE_LITERAL) -> None:  # type: ignore[override]
         print(f"Setting up data for stage: {stage}")
 
         self.data_preprocess()
