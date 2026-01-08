@@ -3,9 +3,8 @@ from functools import cache
 import numpy as np
 import pandas as pd
 import torch
-from ucimlrepo import fetch_ucirepo
-
 from kret_utils.constants_kret import KretConstants
+from ucimlrepo import fetch_ucirepo
 
 DATA_DIR = KretConstants.DATA_DIR / "beijing"
 

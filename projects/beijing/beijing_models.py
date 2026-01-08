@@ -1,8 +1,7 @@
 import typing as t
+
 import torch
 import torch.nn as nn
-from dataclasses import dataclass
-
 from kret_lightning import *
 
 
