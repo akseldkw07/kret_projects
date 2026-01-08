@@ -1,16 +1,26 @@
+from turtle import st
 import typing as t
 from pathlib import Path
 
-from kret_lightning.data_module_custom import CustomDataModule, LoadedDfTuple, PandasInputMixin, SplitTuple
+import lightning as L
+import pandas as pd
+from sklearn.pipeline import Pipeline
+from kret_sklearn.pd_pipeline import Pipeline, PipelinePD
+from kret_sklearn.custom_transformers import MissingValueRemover, DateTimeSinCosNormalizer
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, random_split
+from torchvision import transforms
+from kret_torch_utils.torch_defaults import TorchDefaults
 from kret_np_pd.np_pd_nb_imports import *
-from kret_sklearn.pd_pipeline import PipelinePD
+
+from kret_lightning.data_module_custom import CustomDataModule, LoadedDfTuple, PandasInputMixin, SplitTuple
+from projects.beijing.load_beijing_data import load_beijing_air_quality_data
 from kret_torch_utils.tensor_ds_custom import TensorDatasetCustom
 from kret_torch_utils.UTILS_torch import KRET_TORCH_UTILS
 
-from projects.beijing.load_beijing_data import load_beijing_air_quality_data
-
 if t.TYPE_CHECKING:
-    pass
+    from kret_torch_utils.torch_typehints import DataLoader___init___TypedDict
 
 
 class BeijingDataModule(CustomDataModule, PandasInputMixin):
@@ -23,7 +33,7 @@ class BeijingDataModule(CustomDataModule, PandasInputMixin):
         pipeline_pd: tuple[PipelinePD, PipelinePD] | None = None,
         split: SplitTuple | None = None,
     ) -> None:
-        super().__init__(data_dir=data_dir, split=split, pipeline_pd=pipeline_pd)
+        super().__init__(data_dir=data_dir, split=split, pipeline_pd=pipeline_pd, sequence_length=sequence_length)
         self.sequence_length = sequence_length
 
     def prepare_data(self) -> None:
@@ -31,38 +41,41 @@ class BeijingDataModule(CustomDataModule, PandasInputMixin):
         pass
 
     def load_df(self) -> LoadedDfTuple:
-        x, y = load_beijing_air_quality_data()
+        x, y = load_beijing_air_quality_data(self.data_dir)
         return LoadedDfTuple(X=x, y=y)
 
-    def setup(self, stage: str) -> None:
-        # Load and preprocess the Beijing air quality data
-        # TODO implement splitting if test or predict > 0
-        no_nans = self.load_and_strip_nans()
+    def setup(self, stage: t.Literal["fit", "validate", "test", "predict"]) -> None:  # type: ignore[override]
+        print(f"Setting up data for stage: {stage}")
 
-        train_split_idx = int(self.data_split.train * len(no_nans.X))
+        self.data_preprocess()
 
-        X_train_raw = no_nans.X.iloc[:train_split_idx]
-        y_train_raw = no_nans.y.iloc[:train_split_idx]
-        X_val_raw = no_nans.X.iloc[train_split_idx:]
-        y_val_raw = no_nans.y.iloc[train_split_idx:]
+        match stage:
+            case "fit":
+                eff_split = self.SplitIdx.train
+            case "validate":
+                eff_split = self.SplitIdx.val
+            case "test":
+                assert self.SplitIdx.test is not None, f"Test split indices not defined."
+                eff_split = self.SplitIdx.test
+            case "predict":
+                assert self.SplitIdx.predict is not None, f"Predict split indices not defined."
+                eff_split = self.SplitIdx.predict
+            case _:
+                raise ValueError(f"Unknown stage: {stage!r}")
 
-        # TODO make sure pipeline is fit just once, and is stored
-
-        X_train_cleaned = UKS_NP_PD.move_columns(self.PipelineX.fit_transform_df(X_train_raw), **self.col_order)
-        y_train_cleaned = self.PipelineY.fit_transform_df(y_train_raw)
-
-        X_val_cleaned = UKS_NP_PD.move_columns(self.PipelineX.transform_df(X_val_raw), **self.col_order)
-        y_val_cleaned = self.PipelineY.transform_df(y_val_raw)
-
-        train1d = TensorDatasetCustom.from_pd_xy(X_train_cleaned, y_train_cleaned)
-        val1d = TensorDatasetCustom.from_pd_xy(X_val_cleaned, y_val_cleaned)
-        if stage == "fit":
-            train_temporal = KRET_TORCH_UTILS.create_sequence(
-                train1d, sequence_length=self.sequence_length, target_offset=0
-            )
-            self._train = train_temporal
-
-            val_temporal = KRET_TORCH_UTILS.create_sequence(
-                val1d, sequence_length=self.sequence_length, target_offset=0
-            )
-            self._val = val_temporal
+        tensor1d = TensorDatasetCustom.from_pd_xy(
+            self.x_y_processed.X.iloc[eff_split], self.x_y_processed.y.iloc[eff_split]
+        )
+        tensor_temporal = KRET_TORCH_UTILS.create_sequence(
+            tensor1d, sequence_length=self.sequence_length, target_offset=0
+        )
+        match stage:
+            case "fit":
+                self._train = tensor_temporal
+                self.setup("validate")  # Also setup val set
+            case "validate":
+                self._val = tensor_temporal
+            case "test":
+                self._test = tensor_temporal
+            case "predict":
+                self._predict = tensor_temporal

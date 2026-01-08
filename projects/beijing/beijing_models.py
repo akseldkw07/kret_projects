@@ -21,11 +21,13 @@ class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin):
     - Iws, Is, Ir (cumulative wind speed, snow, rain)
     """
 
-    version: str = "v000"
+    version: str = "v_000"
 
     # Wind direction embedding (cbwd is categorical)
     num_wind_directions: int = 4
     embedding_dim: int = 8
+
+    _criterion: nn.Module = nn.MSELoss()
 
     def __init__(
         self,

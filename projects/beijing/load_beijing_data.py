@@ -1,5 +1,5 @@
 from functools import cache
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
@@ -31,8 +31,8 @@ def load_beijing_air_quality_data_reload(id: int = BEIJING_AIR_REPO_ID):
     return X.copy(deep=True), y.copy(deep=True)
 
 
-def load_beijing_air_quality_data():
-    raw = pd.read_csv(DATA_DIR / "beijing_air.csv")
+def load_beijing_air_quality_data(data_dir: Path = DATA_DIR):
+    raw = pd.read_csv(data_dir / "beijing_air.csv")
     Y = raw[["pm2.5"]]
     X = raw.drop(columns=["No"])
     return X.copy(deep=True), Y.copy(deep=True)
