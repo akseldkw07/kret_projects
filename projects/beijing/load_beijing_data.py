@@ -1,10 +1,12 @@
 from functools import cache
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-import torch
+from kret_sklearn.custom_transformers import DateTimeSinCosNormalizer
+from kret_sklearn.pd_pipeline import PipelinePD
 from kret_utils.constants_kret import KretConstants
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OrdinalEncoder, PowerTransformer
 from ucimlrepo import fetch_ucirepo
 
 DATA_DIR = KretConstants.DATA_DIR / "beijing"
@@ -39,36 +41,29 @@ def load_beijing_air_quality_data(data_dir: Path = DATA_DIR):
     return X.copy(deep=True), Y.copy(deep=True)
 
 
-def create_sequences(tensor_tuple: tuple[torch.Tensor, torch.Tensor], seq_length: int = 24):
-    """
-    Create sequences from temporal data with proper preprocessing.
+def get_beijing_pipeline():
+    float_cols = ["pm2.5", "year", "DEWP", "TEMP", "PRES", "Iws", "Is", "Ir"]
+    date_cols = ["month", "day", "hour"]
+    wind_cols = ["cbwd"]
 
-    IMPORTANT: To avoid data leakage, split your data BEFORE calling this function:
-    """
+    date_time_normalizer = DateTimeSinCosNormalizer(
+        datetime_cols={"month": 12, "day": 31, "hour": 24}
+    )  # Normalize 'month' and 'hour' columns
+    power_transformer = PowerTransformer(method="yeo-johnson", standardize=True)
 
-    X_processed, y_processed = tensor_tuple
+    wind_encoder = OrdinalEncoder()
 
-    # Create sequences
-    X_sequences = []
-    y_sequences = []
+    column_transform = ColumnTransformer(
+        transformers=[
+            ("datetime", date_time_normalizer, date_cols),
+            ("scaler", power_transformer, float_cols),
+            ("windlabel", wind_encoder, wind_cols),
+        ],
+        remainder="passthrough",
+        verbose_feature_names_out=False,
+        verbose=True,
+    )
+    pipeline_x = PipelinePD(steps=[("column_transform", column_transform)])
+    pipeline_y = PipelinePD(steps=[("scaler", power_transformer)])
 
-    for i in range(len(X_processed) - seq_length):
-        X_seq = X_processed[i : i + seq_length]
-        y_seq = y_processed[i + seq_length]  # Predict next timestep
-
-        # Skip if any NaN in sequence
-        if not (np.isnan(X_seq).any() or np.isnan(y_seq).any()):
-            X_sequences.append(X_seq.numpy())
-            y_sequences.append(y_seq.numpy())
-
-    X_seq = np.array(X_sequences)  # (num_samples, seq_length, num_features)
-    y_seq = np.array(y_sequences).flatten()  # (num_samples)
-
-    # Final NaN check (using regular print since this runs before training loop)
-    print(f"Created {len(X_seq)} sequences")
-    print(f"X shape: {X_seq.shape}, contains NaN: {np.isnan(X_seq).any()}")
-    print(f"y shape: {y_seq.shape}, contains NaN: {np.isnan(y_seq).any()}")
-    print(f"X range: [{X_seq.min():.2f}, {X_seq.max():.2f}]")
-    print(f"y range: [{y_seq.min():.2f}, {y_seq.max():.2f}]")
-
-    return torch.FloatTensor(X_seq), torch.FloatTensor(y_seq)
+    return pipeline_x, pipeline_y
