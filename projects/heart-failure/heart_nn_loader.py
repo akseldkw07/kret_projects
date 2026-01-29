@@ -1,16 +1,14 @@
-from kret_torch_utils.tensor_ds_custom import TensorDatasetCustom
-
+import pandas as pd
 from kret_lightning.datamodule.data_module_custom import (
+    STAGE_LITERAL,
     CustomDataModule,
     LoadedDfTuple,
     PandasInputMixin,
-    STAGE_LITERAL,
 )
-
-from kret_sklearn.pd_pipeline import PipelinePD
-from sklearn.preprocessing import FunctionTransformer
-import pandas as pd
 from kret_np_pd.UTILS_np_pd import NP_PD_Utils as UKS_NP_PD
+from kret_sklearn.pd_pipeline import PipelinePD
+from kret_torch_utils.tensor_ds_custom import TensorDatasetCustom
+from sklearn.preprocessing import FunctionTransformer
 
 
 class HeartNNLoader(CustomDataModule, PandasInputMixin):
@@ -52,7 +50,7 @@ class HeartNNLoader(CustomDataModule, PandasInputMixin):
                 raise ValueError(f"Unknown stage: {stage!r}")
 
         tensor1d = TensorDatasetCustom.from_pd_xy(
-            self.x_y_processed.X.iloc[eff_split], self.x_y_processed.y.HeartDisease.iloc[eff_split]
+            self.x_y_processed.X.iloc[eff_split], self.x_y_processed.y.iloc[eff_split]
         )
         match stage:
             case "fit":

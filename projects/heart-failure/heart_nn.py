@@ -2,10 +2,10 @@ import typing as t
 
 import torch
 import torch.nn as nn
-from kret_lightning.mixin_metrics import MetricMixin
-from kret_lightning.mixin_callbacks import CallbackMixin
-from kret_lightning.base_lightning_nn import BaseLightningNN
 from kret_lightning.abc_lightning import HPasKwargs
+from kret_lightning.base_lightning_nn import BaseLightningNN
+from kret_lightning.mixin_callbacks import CallbackMixin
+from kret_lightning.mixin_metrics import MetricMixin
 
 
 class HeartFailureNN(MetricMixin, BaseLightningNN, CallbackMixin):
@@ -21,8 +21,8 @@ class HeartFailureNN(MetricMixin, BaseLightningNN, CallbackMixin):
       high_blood_pressure, platelets, serum_creatinine, serum_sodium, sex, smoking, time
     """
 
-    version: str = "v_000"
-
+    version: str = "v_004"
+    ignore_hparams = ["input_size"]
     _criterion = nn.BCEWithLogitsLoss()
 
     def __init__(
@@ -33,6 +33,7 @@ class HeartFailureNN(MetricMixin, BaseLightningNN, CallbackMixin):
         **kwargs: t.Unpack[HPasKwargs],
     ):
         super().__init__(**kwargs)
+        self.save_hyperparameters(ignore=self.ignore_hparams)
         self.setup_metrics(task="binary")
         self.input_size = input_size
         self.hidden_sizes = hidden_sizes
@@ -50,4 +51,4 @@ class HeartFailureNN(MetricMixin, BaseLightningNN, CallbackMixin):
         self.model = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x).squeeze(1)  # Squeeze for binary classification
+        return self.model(x).squeeze()  # Squeeze for binary classification

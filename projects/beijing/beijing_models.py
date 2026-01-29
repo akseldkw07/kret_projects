@@ -2,10 +2,10 @@ import typing as t
 
 import torch
 import torch.nn as nn
-from kret_lightning.mixin_metrics import MetricMixin
-from kret_lightning.mixin_callbacks import CallbackMixin
-from kret_lightning.base_lightning_nn import BaseLightningNN
 from kret_lightning.abc_lightning import HPasKwargs
+from kret_lightning.base_lightning_nn import BaseLightningNN
+from kret_lightning.mixin_callbacks import CallbackMixin
+from kret_lightning.mixin_metrics import MetricMixin
 
 
 class BeijingAirQualityLSTM(MetricMixin, BaseLightningNN, CallbackMixin):
@@ -75,6 +75,7 @@ class BeijingAirQualityLSTM(MetricMixin, BaseLightningNN, CallbackMixin):
             nn.Dropout(dropout),
             nn.Linear(32, 1),  # Single output: PM2.5 concentration
         )
+        self.save_hyperparameters()
 
     def forward(self, x: torch.Tensor, debug: bool = False) -> torch.Tensor:
         """
