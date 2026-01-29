@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 from kret_sklearn.custom_transformers import DateTimeSinCosNormalizer
 from kret_sklearn.pd_pipeline import PipelinePD
-from kret_utils.constants_kret import KretConstants
+from kret_utils._core.constants_kret import KretConstants
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OrdinalEncoder, PowerTransformer
 from ucimlrepo import fetch_ucirepo
