@@ -2,10 +2,13 @@ import typing as t
 
 import torch
 import torch.nn as nn
-from kret_lightning import *
+from kret_lightning.abc_lightning import HPasKwargs
+from kret_lightning.base_lightning_nn import BaseLightningNN
+from kret_lightning.mixin_callbacks import CallbackMixin
+from kret_lightning.mixin_metrics import MetricMixin
 
 
-class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin, MetricMixin):
+class BeijingAirQualityLSTM(MetricMixin, BaseLightningNN, CallbackMixin):
     """
     LSTM-based model for predicting PM2.5 air quality from temporal meteorological data.
 
@@ -27,7 +30,7 @@ class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin, MetricMixin):
     num_wind_directions: int = 4
     embedding_dim: int = 8
 
-    _criterion: nn.Module = nn.MSELoss()
+    _criterion = nn.MSELoss()
 
     def __init__(
         self,
@@ -39,6 +42,7 @@ class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin, MetricMixin):
         **kwargs: t.Unpack[HPasKwargs],
     ):
         super().__init__(**kwargs)
+        self.setup_metrics(task="regression")
         self.seq_length = seq_length
         self.hidden_size = hidden_size
         self.num_layers = num_layers
@@ -71,6 +75,7 @@ class BeijingAirQualityLSTM(BaseLightningNN, CallbackMixin, MetricMixin):
             nn.Dropout(dropout),
             nn.Linear(32, 1),  # Single output: PM2.5 concentration
         )
+        self.save_hyperparameters()
 
     def forward(self, x: torch.Tensor, debug: bool = False) -> torch.Tensor:
         """
