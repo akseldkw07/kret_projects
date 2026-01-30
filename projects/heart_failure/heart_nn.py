@@ -6,9 +6,10 @@ from kret_lightning.abc_lightning import HPasKwargs
 from kret_lightning.base_lightning_nn import BaseLightningNN
 from kret_lightning.mixin_callbacks import CallbackMixin
 from kret_lightning.mixin_metrics import MetricMixin
+from kret_lightning.mixin_optuna import OptunaMixin
 
 
-class HeartFailureNN(MetricMixin, BaseLightningNN, CallbackMixin):
+class HeartFailureNN(MetricMixin, BaseLightningNN, CallbackMixin, OptunaMixin):
     """
     Neural network model for predicting heart failure events.
 
@@ -52,3 +53,8 @@ class HeartFailureNN(MetricMixin, BaseLightningNN, CallbackMixin):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x).squeeze()  # Squeeze for binary classification
+
+    def predict_step(self, batch, batch_idx=0) -> torch.Tensor:
+        """Returns binary predictions (0/1) by thresholding sigmoid probabilities."""
+        probs = super().predict_step(batch, batch_idx)  # sigmoid already applied by MetricMixin
+        return (probs >= 0.5).long()
